@@ -413,15 +413,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f23d2becf31234640941b376c38219de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapGenerator
+  drawmode: 1
   mapWidth: 50
   mapHeight: 50
-  noiseScale: 10
+  noiseScale: 9.37
   octaves: 3
-  persistance: 0
-  lacunarity: 1
-  seed: 0
+  persistance: 0.5
+  lacunarity: 2
+  seed: -9
   offset: {x: 0, y: 0}
   autoUpdate: 1
+  reigons:
+  - name: Ground
+    height: 0.4
+    colour: {r: 0.3921569, g: 0.5843138, b: 0.9294118, a: 1}
+  - name: Mountain
+    height: 0.7
+    colour: {r: 0.9333334, g: 0.8666667, b: 0.509804, a: 1}
+  - name: Peak
+    height: 1
+    colour: {r: 0.5490196, g: 0.7882354, b: 0.1411765, a: 1}
 --- !u!4 &688394645
 Transform:
   m_ObjectHideFlags: 0
