@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 
 public class MapGenerator : MonoBehaviour
 {
-    public enum DrawMode { NoiseMap, ColourMap, Mesh};
+    public enum DrawMode { NoiseMap, ColourMap, Mesh, FallOffMap };
     public DrawMode drawmode;
 
     [SerializeField] private int mapWidth;
@@ -21,6 +21,9 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private float meshHeightMultiplier;
     [SerializeField] private AnimationCurve meshHeightCurve;
 
+    [SerializeField] private bool useFallOff;
+    [Range(0, 1)][SerializeField] private float fallOffStrength;
+
     public bool autoUpdate;
 
     public TerrainType[] reigons;
@@ -28,25 +31,35 @@ public class MapGenerator : MonoBehaviour
     public void GenerateMap()
     {
         float[,] noiseMap = PerlinNoise.GenerateNoiseMap(mapWidth, mapHeight, seed, noiseScale, octaves, persistance, lacunarity, offset);
+        float[,] falloffMap = FallOffGenerator.GenerateFallOffMap(mapWidth);
 
         Color[] colourMap = new Color[mapWidth * mapHeight];
-        for (int y = 0; y < mapHeight; y++)
-        {
-            for (int x = 0; x < mapWidth; x++)
+
+            for (int y = 0; y < mapHeight; y++)
             {
-                float currentHeight = noiseMap[x, y];
-                for (int i = 0; i < reigons.Length; i++)
+                for (int x = 0; x < mapWidth; x++)
                 {
-                    if (currentHeight <= reigons[i].height)
+                    float currentHeight = noiseMap[x, y];
+
+                    if (useFallOff)
                     {
-                        colourMap[y * mapWidth + x] = reigons[i].colour;
-                        break;
+                        currentHeight = Mathf.Clamp01(currentHeight - falloffMap[x, y] * fallOffStrength);
+                        noiseMap[x, y] = currentHeight;
+                    }
+                    for (int i = 0; i < reigons.Length; i++)
+                    {
+                        noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]*fallOffStrength);
+                        if (currentHeight <= reigons[i].height)
+                        {
+                            colourMap[y * mapWidth + x] = reigons[i].colour;
+                            break;
+                        }
                     }
                 }
             }
-        }
+        
 
-        MapDisplay display = FindObjectOfType<MapDisplay>();
+        MapDisplay display = FindFirstObjectByType<MapDisplay>();
         if (drawmode == DrawMode.NoiseMap)
         {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
@@ -58,6 +71,22 @@ public class MapGenerator : MonoBehaviour
         else if (drawmode == DrawMode.Mesh)
         {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve), TextureGenerator.TextureFromColourMap(colourMap, mapWidth, mapHeight));
+        }
+        else if (drawmode == DrawMode.FallOffMap)
+        {
+            float[,] fallOffMap = FallOffGenerator.GenerateFallOffMap(mapWidth);
+
+            if (useFallOff)
+            {
+                for (int y = 0; y < mapHeight; y++)
+                {
+                    for (int x = 0; x < mapWidth; x++)
+                    {
+                        falloffMap[x, y] *= fallOffStrength;
+                    }
+                }
+            }
+            display.DrawTexture(TextureGenerator.TextureFromHeightMap(falloffMap));
         }
     }
 
