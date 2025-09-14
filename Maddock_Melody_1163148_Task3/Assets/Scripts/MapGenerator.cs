@@ -31,6 +31,12 @@ public class MapGenerator : MonoBehaviour
 
     public bool autoUpdate;
 
+    private void Start()
+    {
+        seed = Random.Range(0, int.MaxValue);
+        GenerateMap();
+    }
+
     public void GenerateMap()
     {
         // Generate the Noise Map
@@ -131,5 +137,6 @@ public class MapGenerator : MonoBehaviour
         public string name;
         public float height;
         public Color colour;
+        public Texture2D texture;
     }
 }

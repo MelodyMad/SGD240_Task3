@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6e7eef12f8fb1254aa54867a38b4cadf
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _WaterTex: {fileID: 2800000, guid: aeff12fbe9fe2384bae4d1b436607b55, type: 3}
+  - _SandTex: {fileID: 2800000, guid: ef1fbc9bae2718d4a8dbe2baaa01399c, type: 3}
+  - _GrassTex: {fileID: 2800000, guid: 216e2729631e003468211108545a08f1, type: 3}
+  - _RockTex: {fileID: 2800000, guid: 9d90663c9ea0d484eae41530ee2031c5, type: 3}
+  - _SnowTex: {fileID: 2800000, guid: 27dcac97c77064349b5278157901e387, type: 3}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
