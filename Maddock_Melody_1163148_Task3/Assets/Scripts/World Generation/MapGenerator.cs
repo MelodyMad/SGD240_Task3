@@ -8,8 +8,8 @@ public class MapGenerator : MonoBehaviour
     public DrawMode drawmode;
 
     [Header("Map Settings")]
-    [SerializeField] private int mapWidth;
-    [SerializeField] private int mapHeight;
+    [SerializeField] private int mapWidth = 200;
+    [SerializeField] private int mapHeight = 200;
     [SerializeField] private float noiseScale;
     [SerializeField] private bool useFallOff;
     [Range(0, 1)][SerializeField] private float fallOffStrength;
@@ -31,9 +31,13 @@ public class MapGenerator : MonoBehaviour
 
     public bool autoUpdate;
 
+    public float[,] NoiseMap { get; private set; }
+    public float[,] falloffMap { get; private set; }
+    public int MapWidth => mapWidth;
+    public int MapHeight => mapHeight;
+
     private void Start()
     {
-        seed = Random.Range(0, int.MaxValue);
         GenerateMap();
     }
 
@@ -41,6 +45,7 @@ public class MapGenerator : MonoBehaviour
     {
         // Generate the Noise Map
         float[,] noiseMap = PerlinNoise.GenerateNoiseMap(mapWidth, mapHeight, seed, noiseScale, octaves, persistance, lacunarity, offset);
+        NoiseMap = noiseMap;
         // Generate the Falloff Map if it is needed
         float[,] falloffMap = FallOffGenerator.GenerateFallOffMap(mapWidth);
         // Generate the Colour Map
@@ -92,6 +97,7 @@ public class MapGenerator : MonoBehaviour
                     meshCollider = display.gameObject.AddComponent<MeshCollider>();
                 }
                 meshCollider.sharedMesh = mesh;
+                meshCollider.sharedMesh = mesh;
                 break;
 
             case DrawMode.FallOffMap:
@@ -107,6 +113,37 @@ public class MapGenerator : MonoBehaviour
                 }
                 display.DrawTexture(TextureGenerator.TextureFromHeightMap(falloffMap));
                 break;
+        }
+
+    }
+
+    public void UpdateColourMap()
+    {
+        if (NoiseMap == null) return;
+
+        Color[] colourMap = new Color[mapWidth * mapHeight];
+
+        for (int y = 0; y < mapHeight; y++)
+        {
+            for (int x = 0; x < mapWidth; x++)
+            {
+                float currentHeight = NoiseMap[x, y];
+
+                for (int i = 0; i < reigons.Length; i++)
+                {
+                    if (currentHeight <= reigons[i].height)
+                    {
+                        colourMap[y * mapWidth + x] = reigons[i].colour;
+                        break;
+                    }
+                }
+            }
+        }
+
+        MapDisplay display = FindFirstObjectByType<MapDisplay>();
+        if (display != null)
+        {
+            display.DrawTexture(TextureGenerator.TextureFromColourMap(colourMap, mapWidth, mapHeight));
         }
     }
 

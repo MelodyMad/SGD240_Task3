@@ -80,20 +80,21 @@ Shader "Custom/Shader"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                // Normalize height based on Y position
-                float height = saturate(IN.worldPos.y / _MapHeight); 
+                float height = saturate(IN.worldPos.y / _MapHeight);
 
-                // Sample each texture
                 half4 water = SAMPLE_TEXTURE2D(_WaterTex, sampler_WaterTex, IN.uv);
                 half4 sand = SAMPLE_TEXTURE2D(_SandTex, sampler_SandTex, IN.uv);
                 half4 grass = SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, IN.uv);
                 half4 rock = SAMPLE_TEXTURE2D(_RockTex, sampler_RockTex, IN.uv);
                 half4 snow = SAMPLE_TEXTURE2D(_SnowTex, sampler_SnowTex, IN.uv);
 
-                // Blend based on height thresholds
-                half4 colour;
+                half4 colour = water; // Default to water if below _WaterHeight
 
-                if (height > _RockHeight)
+                if (height > _SnowHeight)
+                {
+                    colour = snow;
+                }
+                else if (height > _RockHeight)
                 {
                     float t = smoothstep(_RockHeight, _SnowHeight, height);
                     colour = lerp(rock, snow, t);
