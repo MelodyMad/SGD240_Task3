@@ -27,6 +27,7 @@ public class MapGeneratorWithErosion : MonoBehaviour
     private float[,] noiseMap;
     private int vertexCount;
     private float updateTimer;
+    private Vector3 lastPlayerPos;
 
     void Start()
     {
@@ -37,7 +38,13 @@ public class MapGeneratorWithErosion : MonoBehaviour
     {
         if (enableErosion && player != null)
         {
-            ApplyErosion();
+            // Only erode if the player has moved a certain threshold
+            if ((player.position - lastPlayerPos).sqrMagnitude > 0.0001f)
+            {
+                ApplyErosion();
+            }
+
+            lastPlayerPos = player.position;
         }
     }
 
