@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI; // Optional if you're integrating with AI
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
 public class MapGeneratorWithErosion : MonoBehaviour
@@ -26,7 +27,6 @@ public class MapGeneratorWithErosion : MonoBehaviour
 
     private float[,] noiseMap;
     private int vertexCount;
-    private float updateTimer;
     private Vector3 lastPlayerPos;
 
     void Start()
@@ -38,10 +38,10 @@ public class MapGeneratorWithErosion : MonoBehaviour
     {
         if (enableErosion && player != null)
         {
-            // Only erode if the player has moved a certain threshold
+            // Only erode when the player moves
             if ((player.position - lastPlayerPos).sqrMagnitude > 0.0001f)
             {
-                ApplyErosion();
+                ApplyErosionAtPosition(player.position);
             }
 
             lastPlayerPos = player.position;
@@ -77,7 +77,7 @@ public class MapGeneratorWithErosion : MonoBehaviour
 
                 int i = y * (width + 1) + x;
                 vertices[i] = new Vector3(x, noise * heightMultiplier, y);
-                uvs[i] = new Vector2((float)x / width, (float)y / height); // UV mapping
+                uvs[i] = new Vector2((float)x / width, (float)y / height);
             }
         }
 
@@ -101,19 +101,25 @@ public class MapGeneratorWithErosion : MonoBehaviour
 
         mesh.vertices = vertices;
         mesh.triangles = triangles;
-        mesh.uv = uvs; // assign UVs for the shader
+        mesh.uv = uvs;
         mesh.RecalculateNormals();
         meshCollider.sharedMesh = mesh;
+
+        if (terrainMaterial != null)
+            terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
     }
 
-    void ApplyErosion()
+    // universal erosion function (used by both player & AI)
+    public void ApplyErosionAtPosition(Vector3 worldPosition)
     {
-        Vector3 localPlayerPos = transform.InverseTransformPoint(player.position);
+        if (mesh == null || vertices == null) return;
+
+        Vector3 localPos = transform.InverseTransformPoint(worldPosition);
 
         for (int i = 0; i < vertices.Length; i++)
         {
             Vector3 v = vertices[i];
-            float dist = Vector2.Distance(new Vector2(v.x, v.z), new Vector2(localPlayerPos.x, localPlayerPos.z));
+            float dist = Vector2.Distance(new Vector2(v.x, v.z), new Vector2(localPos.x, localPos.z));
 
             if (dist < erosionRadius)
             {
@@ -127,11 +133,6 @@ public class MapGeneratorWithErosion : MonoBehaviour
         mesh.RecalculateNormals();
         meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = mesh;
-
-        // Update shader _MapHeight so it knows the new max height
-        if (terrainMaterial != null)
-        {
-            terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
-        }
     }
 }
+
