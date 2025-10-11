@@ -1,5 +1,5 @@
-using UnityEngine;
-using UnityEngine.AI; // Optional if you're integrating with AI
+﻿using UnityEngine;
+using UnityEngine.AI;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
 public class MapGeneratorWithErosion : MonoBehaviour
@@ -24,6 +24,7 @@ public class MapGeneratorWithErosion : MonoBehaviour
     private Vector3[] vertices;
     private Vector2[] uvs;
     private int[] triangles;
+    public bool IsMapReady { get; private set; } = false;
 
     private float[,] noiseMap;
     private int vertexCount;
@@ -106,14 +107,16 @@ public class MapGeneratorWithErosion : MonoBehaviour
         meshCollider.sharedMesh = mesh;
 
         if (terrainMaterial != null)
+        {
             terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
+        }
+
+        IsMapReady = true;
     }
 
     // universal erosion function (used by both player & AI)
     public void ApplyErosionAtPosition(Vector3 worldPosition)
     {
-        if (mesh == null || vertices == null) return;
-
         Vector3 localPos = transform.InverseTransformPoint(worldPosition);
 
         for (int i = 0; i < vertices.Length; i++)
@@ -133,6 +136,43 @@ public class MapGeneratorWithErosion : MonoBehaviour
         mesh.RecalculateNormals();
         meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = mesh;
+
+        if (terrainMaterial != null)
+        {
+            terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
+        }
     }
+
+    // Return world height at a position
+    public float GetHeightAtPosition(Vector3 worldPos)
+    {
+        if (vertices == null || vertices.Length == 0)
+            return 0f;
+
+        int x = Mathf.Clamp(Mathf.RoundToInt(worldPos.x), 0, mapSize);
+        int z = Mathf.Clamp(Mathf.RoundToInt(worldPos.z), 0, mapSize);
+
+        return vertices[z * (mapSize + 1) + x].y;
+    }
+
+    public int MapSize => mapSize;
+
+    // Return normalized height (0-1) for height preference
+    public float GetNormalizedHeightAtPosition(Vector3 worldPos)
+    {
+        float height = GetHeightAtPosition(worldPos);
+        return Mathf.InverseLerp(0f, heightMultiplier, height);
+    }
+
+    // Clamp agent spawn/movement inside map edges
+    public Vector3 ClampToMap(Vector3 position, float margin = 1f)
+    {
+        float clampedX = Mathf.Clamp(position.x, margin, mapSize - margin);
+        float clampedZ = Mathf.Clamp(position.z, margin, mapSize - margin);
+        return new Vector3(clampedX, position.y, clampedZ);
+    }
+
+    public float HeightMultiplier => heightMultiplier;
 }
+
 

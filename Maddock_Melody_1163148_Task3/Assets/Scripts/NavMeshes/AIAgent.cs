@@ -1,50 +1,109 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent))]
 public class AIAgent : MonoBehaviour
 {
-    private NavMeshAgent agent;
-    [SerializeField] private float wanderRadius = 20f;
-    [SerializeField] private float wanderDelay = 2f;
-    [SerializeField] private MapGeneratorWithErosion erosionScript; // ? Changed from GroundErosion
+    [Header("References")]
+    public MapGeneratorWithErosion mapGenerator;
 
-    private float timer;
+    [Header("Movement Settings")]
+    [SerializeField] private float moveRadius = 30f;
+    [SerializeField] private float moveInterval = 3f;
+    [SerializeField] private float preferredMinHeight = 0.2f;
+    [SerializeField] private float preferredMaxHeight = 0.8f;
+    [SerializeField] private float agentSpeed = 3.5f;
+
+    [Header("Erosion Settings")]
+    [SerializeField] private bool enableErosion = true;
+    [SerializeField] private float erosionInterval = 0.1f;
+
+    private NavMeshAgent agent;
+    private float moveTimer;
+    private float erosionTimer;
+    private bool isMoving;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        timer = wanderDelay;
+
+        if (agent == null)
+        {
+            Debug.LogError("Missing NavMeshAgent on AI Agent!");
+            enabled = false;
+            return;
+        }
+
+        if (mapGenerator == null)
+            mapGenerator = FindObjectOfType<MapGeneratorWithErosion>();
+
+        agent.speed = agentSpeed;
+        moveTimer = Random.Range(0, moveInterval); // stagger movements
     }
 
     void Update()
     {
-        // If agent is not yet on a NavMesh, skip
-        if (!agent.isOnNavMesh)
+        if (mapGenerator == null || agent == null)
             return;
 
-        timer += Time.deltaTime;
+        moveTimer -= Time.deltaTime;
+        erosionTimer -= Time.deltaTime;
 
-        if (timer >= wanderDelay)
+        // Only erode when moving
+        if (isMoving && mapGenerator != null)
         {
-            Vector3 newPos = RandomNavSphere(transform.position, wanderRadius, -1);
-            agent.SetDestination(newPos);
-            timer = 0;
+            mapGenerator.ApplyErosionAtPosition(transform.position);
         }
 
-        // Optional: continuously erode as the AI walks around
-        if (erosionScript != null)
+        if (moveTimer <= 0f)
         {
-            erosionScript.ApplyErosionAtPosition(transform.position);
+            Vector3 newPos = GetRandomNavPosition();
+            if (newPos != Vector3.zero)
+            {
+                agent.SetDestination(newPos);
+                isMoving = true;
+            }
+            moveTimer = moveInterval;
+        }
+
+        // Stop erosion if agent stops moving
+        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        {
+            isMoving = false;
         }
     }
 
-    public static Vector3 RandomNavSphere(Vector3 origin, float dist, int layermask)
+    private Vector3 GetRandomNavPosition()
     {
-        Vector3 randDirection = Random.insideUnitSphere * dist;
-        randDirection += origin;
-        NavMeshHit navHit;
-        NavMesh.SamplePosition(randDirection, out navHit, dist, layermask);
-        return navHit.position;
+        if (mapGenerator == null)
+            return Vector3.zero;
+
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            Vector3 randomDirection = Random.insideUnitSphere * moveRadius;
+            randomDirection += transform.position;
+
+            if (NavMesh.SamplePosition(randomDirection, out NavMeshHit hit, moveRadius, NavMesh.AllAreas))
+            {
+                float height = mapGenerator.GetHeightAtPosition(hit.position);
+                float normalizedHeight = height / mapGenerator.HeightMultiplier;
+
+                // Only accept positions in preferred height range
+                if (normalizedHeight >= preferredMinHeight && normalizedHeight <= preferredMaxHeight)
+                    return hit.position;
+            }
+        }
+
+        return Vector3.zero; // fallback
     }
+
+    public void SetMapGenerator(MapGeneratorWithErosion generator)
+    {
+        mapGenerator = generator;
+    }
+
 }
+
+
+
 
