@@ -57,7 +57,7 @@ namespace UnityEditor.AI
         static Color s_HandleColorDisabled = new Color(127f * 0.75f, 214f * 0.75f, 244f * 0.75f, 100f) / 255;
 
         static int s_HandleControlIDHint = typeof(NavMeshSurfaceEditor).Name.GetHashCode();
-        BoxBoundsHandle m_BoundsHandle = new BoxBoundsHandle(s_HandleControlIDHint);
+        BoxBoundsHandle m_BoundsHandle = new BoxBoundsHandle();
 
         bool editingCollider
         {
@@ -79,12 +79,6 @@ namespace UnityEditor.AI
             m_UseGeometry = serializedObject.FindProperty("m_UseGeometry");
             m_VoxelSize = serializedObject.FindProperty("m_VoxelSize");
 
-            NavMeshVisualizationSettings.showNavigation++;
-        }
-
-        void OnDisable()
-        {
-            NavMeshVisualizationSettings.showNavigation--;
         }
 
         static string GetAndEnsureTargetPath(NavMeshSurface surface)
@@ -111,11 +105,11 @@ namespace UnityEditor.AI
 
         static NavMeshData GetNavMeshAssetToDelete(NavMeshSurface navSurface)
         {
-            var prefabType = PrefabUtility.GetPrefabType(navSurface);
-            if (prefabType == PrefabType.PrefabInstance || prefabType == PrefabType.DisconnectedPrefabInstance)
+            var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(navSurface);
+            if (prefabStatus == PrefabInstanceStatus.Connected)
             {
                 // Don't allow deleting the asset belonging to the prefab parent
-                var parentSurface = PrefabUtility.GetPrefabParent(navSurface) as NavMeshSurface;
+                var parentSurface = PrefabUtility.GetCorrespondingObjectFromSource(navSurface) as NavMeshSurface;
                 if (parentSurface && navSurface.navMeshData == parentSurface.navMeshData)
                     return null;
             }
@@ -385,15 +379,6 @@ namespace UnityEditor.AI
             RenderBoxGizmo(navSurface, gizmoType, true);
         }
 
-        [DrawGizmo(GizmoType.NotInSelectionHierarchy | GizmoType.Pickable)]
-        static void RenderBoxGizmoNotSelected(NavMeshSurface navSurface, GizmoType gizmoType)
-        {
-            if (NavMeshVisualizationSettings.showNavigation > 0)
-                RenderBoxGizmo(navSurface, gizmoType, false);
-            else
-                Gizmos.DrawIcon(navSurface.transform.position, "NavMeshSurface Icon", true);
-        }
-
         static void RenderBoxGizmo(NavMeshSurface navSurface, GizmoType gizmoType, bool selected)
         {
             var color = selected ? s_HandleColorSelected : s_HandleColor;
@@ -438,15 +423,14 @@ namespace UnityEditor.AI
         void InspectorEditButtonGUI()
         {
             var navSurface = (NavMeshSurface)target;
-            var bounds = new Bounds(navSurface.transform.position, navSurface.size);
 
             EditMode.DoEditModeInspectorModeButton(
                 EditMode.SceneViewEditMode.Collider,
                 "Edit Volume",
                 EditorGUIUtility.IconContent("EditCollider"),
-                bounds,
+                () => new Bounds(navSurface.transform.position, navSurface.size),
                 this
-                );
+            );
         }
 
         void OnSceneGUI()
@@ -476,7 +460,7 @@ namespace UnityEditor.AI
             }
         }
 
-        [MenuItem("GameObject/AI/NavMesh Surface", false, 2000)]
+        [MenuItem("GameObject/AI/Custom NavMesh Surface", false, 2000)]
         public static void CreateNavMeshSurface(MenuCommand menuCommand)
         {
             var parent = menuCommand.context as GameObject;

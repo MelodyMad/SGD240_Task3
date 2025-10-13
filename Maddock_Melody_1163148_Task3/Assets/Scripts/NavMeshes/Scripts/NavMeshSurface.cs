@@ -1,3 +1,8 @@
+#if UNITY_EDITOR
+using UnityEditor; // Needed for PrefabUtility
+#endif
+using UnityEngine;
+using UnityEngine.AI;
 using System.Collections.Generic;
 
 namespace UnityEngine.AI
@@ -368,12 +373,12 @@ namespace UnityEngine.AI
                 return false;
 
             // Prefab parent owns the asset reference
-            var prefabType = UnityEditor.PrefabUtility.GetPrefabType(this);
-            if (prefabType == UnityEditor.PrefabType.Prefab)
+            var assetType = PrefabUtility.GetPrefabAssetType(this);
+            if (assetType == PrefabAssetType.Regular)
                 return false;
 
             // An instance can share asset reference only with its prefab parent
-            var prefab = UnityEditor.PrefabUtility.GetPrefabParent(this) as NavMeshSurface;
+            var prefab = PrefabUtility.GetCorrespondingObjectFromSource(this) as NavMeshSurface;
             if (prefab != null && prefab.navMeshData == navMeshData)
                 return false;
 
@@ -414,7 +419,8 @@ namespace UnityEngine.AI
 
                 if (!m_OverrideTileSize)
                     m_TileSize = kDefaultTileSize;
-                // Make sure tilesize is in sane range.
+
+                // Make sure tile size is in a sane range
                 if (m_TileSize < kMinTileSize)
                     m_TileSize = kMinTileSize;
                 if (m_TileSize > kMaxTileSize)

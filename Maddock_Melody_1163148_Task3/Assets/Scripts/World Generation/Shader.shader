@@ -1,19 +1,26 @@
 Shader "Custom/Shader"
 {
+    /// <summary>
+    /// This customer shader blends multplie terrain textures based on world height. Heights for each layer are adjustable via properties, allowing smooth transitions between textures.
+    /// <summary>
+
     Properties
     {
+        // Terrain textures
         _WaterTex("Water Texture", 2D) = "white" {}
         _SandTex("Sand Texture", 2D) = "white" {}
         _GrassTex("Grass Texture", 2D) = "white" {}
         _RockTex("Rock Texture", 2D) = "white" {}
         _SnowTex("Snow Texture", 2D) = "white" {}
         
+        // Height thresholds (0-1 normailsed)
         _WaterHeight("Water Height", Range(0,1)) = 0.0
         _SandHeight("Sand Height", Range(0,1)) = 0.3
         _GrassHeight("Grass Height", Range(0,1)) = 0.6
         _RockHeight("Rock Height", Range(0,1)) = 0.8
         _SnowHeight("Snow Height", Range(0,1)) = 1.0
 
+        // Maximum map height (world units)
         _MapHeight("Map Height", Float) = 50.0
     }
 
@@ -43,6 +50,7 @@ Shader "Custom/Shader"
                 float3 worldPos : TEXCOORD1; 
             };
 
+            //Declare textures and samplers
             TEXTURE2D(_WaterTex); 
             SAMPLER(sampler_WaterTex);
             
@@ -58,7 +66,7 @@ Shader "Custom/Shader"
             TEXTURE2D(_SnowTex); 
             SAMPLER(sampler_SnowTex);
 
-            // Heights
+            // Height properties and map height
             CBUFFER_START(UnityPerMaterial)
                 float _WaterHeight;
                 float _SandHeight;
@@ -68,6 +76,7 @@ Shader "Custom/Shader"
                 float _MapHeight;
             CBUFFER_END
 
+            // Vertex shader
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -75,21 +84,25 @@ Shader "Custom/Shader"
                 OUT.uv = IN.uv;
                 OUT.worldPos = TransformObjectToWorld(IN.positionOS.xyz);
                 return OUT;
-
             }
 
+            // Fragment shader
             half4 frag(Varyings IN) : SV_Target
             {
+                // Normailse height between 0-1
                 float height = saturate(IN.worldPos.y / _MapHeight);
 
+                // Sample all textures
                 half4 water = SAMPLE_TEXTURE2D(_WaterTex, sampler_WaterTex, IN.uv);
                 half4 sand = SAMPLE_TEXTURE2D(_SandTex, sampler_SandTex, IN.uv);
                 half4 grass = SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, IN.uv);
                 half4 rock = SAMPLE_TEXTURE2D(_RockTex, sampler_RockTex, IN.uv);
                 half4 snow = SAMPLE_TEXTURE2D(_SnowTex, sampler_SnowTex, IN.uv);
 
-                half4 colour = water; // Default to water if below _WaterHeight
+                // Default to water for lowest heights
+                half4 colour = water; 
 
+                // Blend textures based on height using smoothstep for soft transitions
                 if (height > _SnowHeight)
                 {
                     colour = snow;

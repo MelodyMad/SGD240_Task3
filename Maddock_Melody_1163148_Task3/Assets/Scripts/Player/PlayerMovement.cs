@@ -1,82 +1,76 @@
 using UnityEngine;
 
+/// <summary>
+/// This script handles the first-person player movement, which includes walking, sprinting, jumping and slope handling.
+/// </summary>
+
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float walkSpeed;
+    [SerializeField] private float walkSpeed; 
     [SerializeField] private float sprintSpeed;
-    private float moveSpeed;
-    [SerializeField] private float groundDrag;
+    private float moveSpeed; // Current speed depending on state
+    [SerializeField] private float groundDrag; // Drag applied when grounded
 
     [Header("Jumping")]
-    [SerializeField] private float jumpForce;
-    [SerializeField] private float jumpCooldown;
-    [SerializeField] private float airMultiplier;
-    bool readyToJump;
+    [SerializeField] private float jumpForce; 
+    [SerializeField] private float jumpCooldown; // Delay before being able to jump again
+    [SerializeField] private float airMultiplier; // Speed multiplier when in air
+    private bool readyToJump; // Flag to track jump cooldown
 
     [Header("Ground Check")]
-    [SerializeField] private float playerHeight;
-    [SerializeField] private LayerMask whatIsGround;
-    bool grounded;
+    [SerializeField] private float playerHeight; // The player's height for ground detection
+    [SerializeField] private LayerMask whatIsGround; // Layer mask to definine ground
+    private bool grounded; // Check if the player is on the ground
 
     [Header("Slope Handling")]
-    [SerializeField] private float maxSlopeAngle;
-    private RaycastHit slopeHit;
-    private bool exitingSlope;
+    [SerializeField] private float maxSlopeAngle; // Max slope angle player can walk on
+    private RaycastHit slopeHit; // Infomation about the slope underneath the player
+    private bool exitingSlope; // Flag to prevent jump issues on slopes
 
     [Header("Keybinds")]
-    [SerializeField] private KeyCode jumpKey = KeyCode.Space;
-    [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
+    [SerializeField] private KeyCode jumpKey = KeyCode.Space; // Set key used for jumping, set to space bar
+    [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift; // Set key used for sprinting, set to left shift
 
-    public Transform orientation;
+    public Transform orientation; // Player's orientation 
 
-    float horizontalInput;
-    float verticalInput;
+    private float horizontalInput; // Input axis for horizontal movement
+    private float verticalInput; // Input axis for vertical movement
+    private Vector3 moveDirection; // Movement direction
+    private Rigidbody rigidBody; // Rigidbody component for physics
 
-    Vector3 moveDirection;
+    public MovementState state; // Current movement state
+    public enum MovementState { walking, sprinting, air } // Different movement states
 
-    Rigidbody rigidBody;
-
-    public MovementState state;
-    public enum MovementState
-    { walking, sprinting, air }
-
+    // When the game starts
     private void Start()
     {
-        // Assign the Rigidbody
-        rigidBody = GetComponent<Rigidbody>();
-        // Stop the Rotation so the player does not fall over
-        rigidBody.freezeRotation = true;
-        readyToJump = true;
+        rigidBody = GetComponent<Rigidbody>(); // Assign the Rigidbody
+        rigidBody.freezeRotation = true; // Stop the rotation so the player does not fall over
+        readyToJump = true; // The player can jump
     }
 
+    // On every frame
     private void Update()
     {
-        // Ground Check
+        // Check if the player is grounded using a downward raycast
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
 
-        MyInput();
-        SpeedControl();
-        StateHandler();
+        PlayerInput(); // Handle Input
+        SpeedControl(); // Limit speed
+        StateHandler(); // Update the movement state
 
-        // Handle drag
-        if (grounded)
-        {
-            rigidBody.linearDamping = groundDrag;
-        }
-        else
-        {
-            rigidBody.linearDamping = 0;
-        }
+        // Apply drag based on whether player is grounded
+        rigidBody.linearDamping = grounded ? groundDrag : 0;
 
-        // To increase gravity when falling
+        // Increase gravity when falling
         if (rigidBody.linearVelocity.y < 0)
         {
             rigidBody.AddForce(Vector3.down * 15f, ForceMode.Acceleration);
         }
         else if (rigidBody.linearVelocity.y > 0 && !Input.GetKey(jumpKey))
         {
-            // Let go of jump early to create a shorter jump
+            // Create a shorter jump if the key is released early
             rigidBody.AddForce(Vector3.down * 10f, ForceMode.Acceleration);
         }
     }
@@ -86,53 +80,55 @@ public class PlayerMovement : MonoBehaviour
         MovePlayer();
     }
 
-    private void MyInput()
+    private void PlayerInput()
     {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        // When to jump
+        // Jump Logic
         if (Input.GetKeyDown(jumpKey) && readyToJump && grounded)
         {
             readyToJump = false;
 
             Jump();
 
-            Invoke(nameof(ResetJump), jumpCooldown);
+            Invoke(nameof(ResetJump), jumpCooldown); // Reset jump after cooldown
         }
     }
 
     private void MovePlayer()
     {
-        // Calculate movement direction
+        // Calculate movement direction relative to the player's orientation
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
-        // On Slope
+        // Handling movement on slopes
         if (OnSlope() && !exitingSlope)
         {
             rigidBody.AddForce(GetSlopeMoveDirection() * moveSpeed * 20f, ForceMode.Force);
             
             if (rigidBody.linearVelocity.y > 0)
             {
-                rigidBody.AddForce(Vector3.down * 80f, ForceMode.Force);
+                rigidBody.AddForce(Vector3.down * 80f, ForceMode.Force); // To keep the player grounded
             }
         }
 
-        // On ground
+        // Handling movement when on the ground
         if (grounded)
         {
             rigidBody.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
         }
-        // In Air
+
+        // Handling movement when in the air
         else if (!grounded)
         {
             rigidBody.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
         }
 
-        // Remove Gravity while on a slope to prevent sliding
+        // Disable built-in gravity while on a slope to prevent sliding
         rigidBody.useGravity = !OnSlope();
     }
 
+    // To change the different movement states
     private void StateHandler()
     {
         // Sprinting
@@ -156,7 +152,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void SpeedControl()
     {
-        // Limit speed on a slope
+        // Limit speed on a slopes
         if (OnSlope() && !exitingSlope)
         {
             if (rigidBody.linearVelocity.magnitude > moveSpeed)
@@ -164,28 +160,26 @@ public class PlayerMovement : MonoBehaviour
                 rigidBody.linearVelocity = rigidBody.linearVelocity.normalized * moveSpeed;
             }
         }
-        // Limiting the speed on ground or in air
+        // Limit horizontal speed when on the ground or in the air
         else
         {
             Vector3 flatVelocity = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
-
-            // Limit velocity if needed
+            // Limit velocity if required
             if (flatVelocity.magnitude > moveSpeed)
             {
                 Vector3 limitedVelocity = flatVelocity.normalized * moveSpeed;
                 rigidBody.linearVelocity = new Vector3(limitedVelocity.x, rigidBody.linearVelocity.y, limitedVelocity.z);
             }
         }
-        
     }
 
     private void Jump()
     {
-        exitingSlope = true;
+        exitingSlope = true; // To prevent slope issues
 
-        // Reset y velocity
+        // Reset verticle velocity before jumping
         rigidBody.linearVelocity = new Vector3(rigidBody.linearVelocity.x, 0f, rigidBody.linearVelocity.z);
-
+        // Apply the jump force
         rigidBody.AddForce(transform.up * jumpForce, ForceMode.Impulse);
     }
 
@@ -197,6 +191,7 @@ public class PlayerMovement : MonoBehaviour
 
     private bool OnSlope()
     {
+        // Check if the player is standing on a slope
         if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, playerHeight * 0.5f + 0.3f))
         {
             float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
@@ -207,6 +202,7 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 GetSlopeMoveDirection()
     {
+        // Project movement direction onto the slope plane
         return Vector3.ProjectOnPlane(moveDirection, slopeHit.normal).normalized;
     }
 

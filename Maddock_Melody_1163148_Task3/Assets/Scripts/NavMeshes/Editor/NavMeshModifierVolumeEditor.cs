@@ -18,7 +18,7 @@ namespace UnityEditor.AI
         static Color s_HandleColorDisabled = new Color(187f * 0.75f, 138f * 0.75f, 240f * 0.75f, 100f) / 255;
 
         static int s_HandleControlIDHint = typeof(NavMeshModifierVolumeEditor).Name.GetHashCode();
-        BoxBoundsHandle m_BoundsHandle = new BoxBoundsHandle(s_HandleControlIDHint);
+        BoxBoundsHandle m_BoundsHandle = new BoxBoundsHandle();
 
         bool editingCollider
         {
@@ -32,13 +32,8 @@ namespace UnityEditor.AI
             m_Center = serializedObject.FindProperty("m_Center");
             m_Size = serializedObject.FindProperty("m_Size");
 
-            NavMeshVisualizationSettings.showNavigation++;
         }
 
-        void OnDisable()
-        {
-            NavMeshVisualizationSettings.showNavigation--;
-        }
 
         public override void OnInspectorGUI()
         {
@@ -79,40 +74,19 @@ namespace UnityEditor.AI
             Gizmos.DrawIcon(navModifier.transform.position, "NavMeshModifierVolume Icon", true);
         }
 
-        [DrawGizmo(GizmoType.NotInSelectionHierarchy | GizmoType.Pickable)]
-        static void RenderBoxGizmoNotSelected(NavMeshModifierVolume navModifier, GizmoType gizmoType)
-        {
-            if (NavMeshVisualizationSettings.showNavigation > 0)
-            {
-                var color = navModifier.enabled ? s_HandleColor : s_HandleColorDisabled;
-                var oldColor = Gizmos.color;
-                var oldMatrix = Gizmos.matrix;
-
-                Gizmos.matrix = navModifier.transform.localToWorldMatrix;
-
-                Gizmos.color = color;
-                Gizmos.DrawWireCube(navModifier.center, navModifier.size);
-
-                Gizmos.matrix = oldMatrix;
-                Gizmos.color = oldColor;
-            }
-
-            Gizmos.DrawIcon(navModifier.transform.position, "NavMeshModifierVolume Icon", true);
-        }
-
         void InspectorEditButtonGUI()
         {
             var navModifier = (NavMeshModifierVolume)target;
-            var bounds = new Bounds(navModifier.transform.position, navModifier.size);
 
             EditMode.DoEditModeInspectorModeButton(
                 EditMode.SceneViewEditMode.Collider,
                 "Edit Volume",
                 EditorGUIUtility.IconContent("EditCollider"),
-                bounds,
+                () => new Bounds(navModifier.transform.position, navModifier.size),
                 this
-                );
+            );
         }
+
 
         void OnSceneGUI()
         {
@@ -140,7 +114,7 @@ namespace UnityEditor.AI
             }
         }
 
-        [MenuItem("GameObject/AI/NavMesh Modifier Volume", false, 2001)]
+        [MenuItem("GameObject/AI/Custom NavMesh Modifier Volume", false, 2001)]
         static public void CreateNavMeshModifierVolume(MenuCommand menuCommand)
         {
             var parent = menuCommand.context as GameObject;

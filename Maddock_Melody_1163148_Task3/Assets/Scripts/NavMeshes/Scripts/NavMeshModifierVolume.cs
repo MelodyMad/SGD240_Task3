@@ -30,7 +30,7 @@ namespace UnityEngine.AI
         {
             get { return s_NavMeshModifiers; }
         }
-
+        
         void OnEnable()
         {
             if (!s_NavMeshModifiers.Contains(this))

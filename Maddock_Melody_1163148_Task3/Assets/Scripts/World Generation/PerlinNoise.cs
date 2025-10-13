@@ -1,11 +1,17 @@
 using UnityEngine;
 
+/// <summary>
+/// This script generates a Perlin noise map with support for multiple octaves, persistence, lacunarity, and offsets.
+/// This allows realistic terrain height maps for procedural generation to be created.
+/// </summary>
+
 public static class PerlinNoise
 {
     public static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset)
     {
         float[,] noiseMap = new float [mapWidth, mapHeight];
 
+        // Initialize pseudo-random number generator and octave offsets
         System.Random prng = new System.Random(seed);
         Vector2[] octaveOffsets = new Vector2[octaves];
         for (int i = 0; i < octaves; i++)
@@ -15,6 +21,7 @@ public static class PerlinNoise
             octaveOffsets[i] = new Vector2(offsetX, offsetY);
         }
 
+        // Prevent division by zero
         if (scale <=0)
         {
             scale = 0.0001f;
@@ -25,26 +32,29 @@ public static class PerlinNoise
         float halfWidth = mapWidth / 2f;
         float halfHeight = mapHeight / 2f;
 
+        // Generate noise values
         for (int y = 0; y < mapHeight; y++)
         {
             for (int x = 0; x < mapWidth; x++)
             {
-                float amplitude = 1;
-                float frequency = 1;
-                float noiseHeight = 0;
+                float amplitude = 1; // Influence of this octave
+                float frequency = 1; // Frequency of this octave
+                float noiseHeight = 0; // Accumulated noise
 
                 for (int i = 0; i < octaves; i++)
                 {
+                    // Calculate sample coordinates with offsets and frequency
                     float xCoord = (x-halfWidth) / scale * frequency + octaveOffsets[i].x;
                     float yCoord = (y-halfHeight) / scale * frequency + octaveOffsets[i].y;
 
+                    // Perlin noise in range [-1, 1]
                     float perlinValue = Mathf.PerlinNoise(xCoord, yCoord) * 2 - 1;
-                    noiseMap[x, y] = perlinValue;
                     noiseHeight += perlinValue * amplitude;
 
-                    amplitude *= persistance;
-                    frequency *= lacunarity;
+                    amplitude *= persistance; // Decrease amplitude for higher octaves
+                    frequency *= lacunarity; // Increase frequency for higher octaves
                 }
+                // Track min/max for normalization
                 if (noiseHeight > maxNoiseHeight)
                 {
                     maxNoiseHeight = noiseHeight;
@@ -53,10 +63,12 @@ public static class PerlinNoise
                 {
                     minNoiseHeight = noiseHeight;
                 }
+
                 noiseMap[x, y] = noiseHeight;
             }
         }
 
+        // Normalize the noise map to [0, 1]
         for (int y = 0; y < mapHeight; y++)
         {
             for (int x = 0; x < mapWidth; x++)
@@ -67,7 +79,4 @@ public static class PerlinNoise
 
         return noiseMap;
     }
-
-
-
 }
