@@ -149,11 +149,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 799a9934be0e03a4caa0834e96f94275, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AIAgent
-  mapGenerator: {fileID: 0}
-  moveRadius: 30
-  moveInterval: 3
-  preferredMinHeight: 0.2
-  preferredMaxHeight: 0.8
-  agentSpeed: 10
+  mapGeneratorScript: {fileID: 0}
+  moveRadius: 50
+  moveInterval: 5
+  minHeight: 0.2
+  maxHeight: 0.8
+  speed: 3.5
   enableErosion: 1
-  erosionInterval: 1

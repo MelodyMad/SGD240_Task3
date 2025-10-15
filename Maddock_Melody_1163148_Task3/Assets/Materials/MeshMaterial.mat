@@ -121,13 +121,13 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _GrassHeight: 0.4
-    - _MapHeight: 10
+    - _MapHeight: 40
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _RockHeight: 0.9
+    - _RockHeight: 0.6
     - _SandHeight: 0.2
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
