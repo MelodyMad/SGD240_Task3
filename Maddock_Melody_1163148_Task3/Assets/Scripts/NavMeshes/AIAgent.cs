@@ -2,35 +2,38 @@
 using UnityEngine.AI;
 
 /// <summary>
-/// Controls AI agents that roam around randomly on the NavMesh,
-/// using map height and erosion logic from any map generator implementing IMapGenerator.
+/// <summary>
+/// Controls AI agents that roam randomly within a defined radius on the NavMesh.
+/// Integrates with any terrain generator implementing IMapGenerator to sample height, apply erosion, and constrain movement within map bounds.
 /// </summary>
+
 [RequireComponent(typeof(NavMeshAgent))]
 public class AIAgent : MonoBehaviour
 {
     [Header("References")]
-    public MonoBehaviour mapGeneratorScript; // Drag your map generator here
-    private IMapGenerator mapGenerator;      // Interface reference for flexibility
+    public MonoBehaviour mapGeneratorScript; // Assigned map generator script in the Inspector
+    private IMapGenerator mapGenerator; // Interface reference for flexible map generator use
 
     [Header("Movement Settings")]
-    [SerializeField] private float moveRadius = 50f;
-    [SerializeField] private float moveInterval = 5f;
-    [Range(0, 1)][SerializeField] private float minHeight = 0.2f;
-    [Range(0, 1)][SerializeField] private float maxHeight = 0.8f;
-    [SerializeField] private float speed = 3.5f;
+    [SerializeField] private float moveRadius = 50f; // Max distance the agent can move from its current position
+    [SerializeField] private float moveInterval = 5f; // Time between picking new destinations
+    [Range(0, 1)][SerializeField] private float minHeight = 0.2f; // Minimum allowed terrain height
+    [Range(0, 1)][SerializeField] private float maxHeight = 0.8f; // Maximum allowed terrain height
+    [SerializeField] private float speed = 3.5f; // Agent movement speed
 
     [Header("Erosion Settings")]
-    [SerializeField] private bool enableErosion = true;
+    [SerializeField] private bool enableErosion = true; // Option for the agent to cause erosion while moving
 
-    private NavMeshAgent agent;
+    private NavMeshAgent agent; 
     private float moveTimer;
     private bool isMoving;
 
+    // When the game starts
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
 
-        // Make sure the assigned script implements the interface
+        // Validate that the assigned script implements IMapGenerator
         mapGenerator = mapGeneratorScript as IMapGenerator;
         if (mapGenerator == null)
         {
@@ -39,12 +42,12 @@ public class AIAgent : MonoBehaviour
             return;
         }
 
-        agent.speed = speed;
-        moveTimer = Random.Range(0, moveInterval);
-
+        agent.speed = speed; // Stagger movement timing between agents
+        moveTimer = Random.Range(0, moveInterval); // Start by moving somewhere random
         SetRandomDestination();
     }
 
+    // Updated every frame
     void Update()
     {
         if (mapGenerator == null || agent == null)
@@ -57,7 +60,7 @@ public class AIAgent : MonoBehaviour
         {
             mapGenerator.ApplyErosionAtPosition(transform.position);
         }
-
+        // When timer expires, pick a new destination
         if (moveTimer <= 0f)
         {
             Vector3 newPos = GetRandomNavPosition();
@@ -69,6 +72,7 @@ public class AIAgent : MonoBehaviour
         }
     }
 
+    // Finds a valid random position on the NavMesh within the move radius. Only returns positions within the specified height range.
     private Vector3 GetRandomNavPosition()
     {
         for (int attempt = 0; attempt < 10; attempt++)
@@ -79,15 +83,18 @@ public class AIAgent : MonoBehaviour
             {
                 float height = mapGenerator.GetHeightAtPosition(hit.position);
                 float normalizedHeight = mapGenerator.GetNormalizedHeightAtPosition(hit.position);
-
+                // Only move to terrain within desired height limits
                 if (normalizedHeight >= minHeight && normalizedHeight <= maxHeight)
+                {
                     return mapGenerator.ClampToMap(hit.position);
+                }
             }
         }
 
-        return Vector3.zero;
+        return Vector3.zero; // Return zero if no valid spot found
     }
 
+    // Sets an initial random destination for the agent when spawned.
     private void SetRandomDestination()
     {
         Vector3 randomPoint = transform.position + Random.insideUnitSphere * moveRadius;

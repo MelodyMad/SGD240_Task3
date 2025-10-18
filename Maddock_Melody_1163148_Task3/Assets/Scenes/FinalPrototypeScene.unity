@@ -1104,7 +1104,7 @@ MonoBehaviour:
   mapHeight: 200
   noiseScale: 50
   octaves: 4
-  persistance: 0.35
+  persistance: 0.635
   lacunarity: 2
   seed: 0
   offset: {x: 0, y: 0}

@@ -1,5 +1,9 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// Defines a standard interface for map generation systems, ensuring consistent methods for terrain height sampling, boundary clamping, erosion application, and NavMesh generation across different map generator implementations.
+/// </summary>
+
 public interface IMapGenerator
 {
     /// <summary>
