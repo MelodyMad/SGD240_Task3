@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using Unity.AI.Navigation;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Generates a customizable procedural terrain using Perlin noise, optional falloff, and player-driven erosion. Also supports automatic NavMesh rebuilding and provides utility methods for sampling and clamping terrain positions.
@@ -40,6 +43,9 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
 
     [Header("References")]
     [SerializeField] private Material terrainMaterial; // Material applied to generated terrain
+
+    [Header("Editor Settings")]
+    public bool autoUpdate = true;
 
     private Mesh mesh; // The 3D mesh that forms the visible terrain surface in Unity.
     private MeshCollider meshCollider; // The collider that matches the terrain mesh, allowing physical interactions
@@ -191,6 +197,7 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
             surface.BuildNavMesh();
         }
     }
+
 }
 
 

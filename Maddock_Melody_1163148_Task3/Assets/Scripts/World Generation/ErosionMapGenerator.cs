@@ -2,8 +2,7 @@
 using UnityEngine.AI;
 
 /// <summary>
-/// This script generates a procedural terrain mesh with erosion applied by the player or agents. 
-/// Implements IMapGenerator so it can be used by the AI agent system.
+/// This script generates a procedural terrain mesh with erosion applied by the player or agents. Implements IMapGenerator so it can be used by the AI agent system.
 /// </summary>
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]

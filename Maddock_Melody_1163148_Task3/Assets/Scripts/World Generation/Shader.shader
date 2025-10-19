@@ -16,8 +16,8 @@ Shader "Custom/Shader"
         // Height thresholds (0-1 normailsed)
         _WaterHeight("Water Height", Range(0,1)) = 0.0
         _SandHeight("Sand Height", Range(0,1)) = 0.3
-        _GrassHeight("Grass Height", Range(0,1)) = 0.6
-        _RockHeight("Rock Height", Range(0,1)) = 0.8
+        _GrassHeight("Grass Height", Range(0,1)) = 0.5
+        _RockHeight("Rock Height", Range(0,1)) = 0.7
         _SnowHeight("Snow Height", Range(0,1)) = 1.0
 
         // Maximum map height (world units)

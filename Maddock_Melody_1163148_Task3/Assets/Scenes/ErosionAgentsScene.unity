@@ -742,7 +742,7 @@ MonoBehaviour:
   enableErosion: 1
   player: {fileID: 954681019}
   erosionRadius: 3
-  erosionStrength: 0.4
+  erosionStrength: 0.6
   erosionFalloff: 3
   terrainMaterial: {fileID: 2100000, guid: 897b6febda6868344a1454999c7c1368, type: 2}
 --- !u!64 &770582361

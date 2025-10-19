@@ -47,6 +47,7 @@ public class MapGenerator : MonoBehaviour
     }
 
     // Generates the terrain map according to the currenct settinds and updates the display based on the selected DrawMode.
+    [ContextMenu("Generate Map")]
     public void GenerateMap()
     {
         // Generate the Noise Map
