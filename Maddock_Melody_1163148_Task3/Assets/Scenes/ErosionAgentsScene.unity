@@ -711,10 +711,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 770582364}
+  - component: {fileID: 770582360}
   - component: {fileID: 770582363}
   - component: {fileID: 770582362}
   - component: {fileID: 770582361}
-  - component: {fileID: 770582360}
   - component: {fileID: 770582366}
   - component: {fileID: 770582367}
   m_Layer: 7
@@ -742,7 +742,7 @@ MonoBehaviour:
   enableErosion: 1
   player: {fileID: 954681019}
   erosionRadius: 3
-  erosionStrength: 0.6
+  erosionStrength: 0.01
   erosionFalloff: 3
   terrainMaterial: {fileID: 2100000, guid: 897b6febda6868344a1454999c7c1368, type: 2}
 --- !u!64 &770582361
@@ -906,7 +906,7 @@ Transform:
   m_GameObject: {fileID: 954681018}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15, y: 20, z: 15}
+  m_LocalPosition: {x: 20, y: 30, z: 20}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

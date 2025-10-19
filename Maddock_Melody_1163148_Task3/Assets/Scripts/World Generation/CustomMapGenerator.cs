@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 using Unity.AI.Navigation;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 /// <summary>
 /// Generates a customizable procedural terrain using Perlin noise, optional falloff, and player-driven erosion. Also supports automatic NavMesh rebuilding and provides utility methods for sampling and clamping terrain positions.
@@ -36,7 +33,7 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
     [Header("Erosion Settings")]
     [SerializeField] private bool enablePlayerErosion = true; // Enables erosion caused by player movement
     [SerializeField] private Transform player; // Player reference for erosion source
-    [SerializeField] private float minMoveDistance = 0.2f; // Distance player must move before erosion triggers
+    [SerializeField] private float minMoveDistance = 0.1f; // Distance player must move before erosion triggers
     [SerializeField] private float erosionRadius = 3f; // Radius around player affected by erosion
     [SerializeField] private float erosionStrength = 0.5f; // How deep erosion removes terrain
     [SerializeField] private float erosionFalloff = 3f; // Controls smoothness of erosion gradient
@@ -126,6 +123,7 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
 
         if (terrainMaterial != null)
         {
+            // Create a unique material instance for this terrain
             GetComponent<MeshRenderer>().material = terrainMaterial;
         }
 
@@ -137,30 +135,30 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
     public void ApplyErosionAtPosition(Vector3 worldPosition)
     {
         // Skip erosion if disabled
-        if (!enablePlayerErosion && player != null && worldPosition == player.position)
+        if (!enablePlayerErosion || vertices == null || vertices.Length == 0)
             return;
 
-        // Convert to local space (terrain-relative position)
         Vector3 localPos = transform.InverseTransformPoint(worldPosition);
 
-        // Loop through all vertices and lower those within erosion radius
         for (int i = 0; i < vertices.Length; i++)
         {
             Vector3 v = vertices[i];
+            // Use local positions directly, no meshScale multiplication
             float dist = Vector2.Distance(new Vector2(v.x, v.z), new Vector2(localPos.x, localPos.z));
-            // Falloff makes erosion stronger near the center
+
             if (dist < erosionRadius)
             {
-                float falloff = 1 - Mathf.Pow(dist / erosionRadius, erosionFalloff);
-                v.y -= erosionStrength * falloff * Time.deltaTime;
+                // Erosion falloff: smooth circular radius
+                float falloff = Mathf.Clamp01(1f - Mathf.Pow(dist / erosionRadius, erosionFalloff));
+                v.y -= erosionStrength * falloff; 
                 vertices[i] = v;
             }
         }
 
-        // Apply vertex changes to the mesh
+        // Update mesh & collider based on the vertex changes
         mesh.vertices = vertices;
         mesh.RecalculateNormals(); // Keeps lighting smooth
-        meshCollider.sharedMesh = mesh; // Update collider for accurate physics
+        meshCollider.sharedMesh = mesh;
     }
 
     // Returns the terrain height at a specific world position.
@@ -168,10 +166,17 @@ public class CustomMapGenerator : MonoBehaviour, IMapGenerator
     {
         if (vertices == null || vertices.Length == 0) return 0f;
 
-        int x = Mathf.Clamp(Mathf.RoundToInt(worldPos.x), 0, mapWidth - 1);
-        int z = Mathf.Clamp(Mathf.RoundToInt(worldPos.z), 0, mapHeight - 1);
-        // Convert (x,z) grid position into vertex index
-        return vertices[z * (mapWidth + 1) + x].y;
+        // Clamp to valid vertex indices
+        int x = Mathf.Clamp(Mathf.RoundToInt(worldPos.x), 0, mapWidth);
+        int z = Mathf.Clamp(Mathf.RoundToInt(worldPos.z), 0, mapHeight);
+
+        int index = z * (mapWidth + 1) + x;
+
+        // Extra safety check
+        if (index < 0 || index >= vertices.Length)
+            return 0f;
+
+        return vertices[index].y;
     }
 
     // Keeps positions inside the terrain boundaries (prevents going off map).

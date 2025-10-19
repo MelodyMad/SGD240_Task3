@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// This script generates a procedural terrain mesh with erosion applied by the player or agents. Implements IMapGenerator so it can be used by the AI agent system.
@@ -22,6 +25,7 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
 
     [Header("References")]
     [SerializeField] private Material terrainMaterial; // Assign custom shader
+    private float originalMapHeight; // store the original shader value
 
     private Mesh mesh; // Terrain mesh
     private MeshCollider meshCollider; // Collider for the mesh
@@ -29,6 +33,33 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
     private Vector3 lastPlayerPos; // Last recorded player position
 
     public bool IsMapReady { get; private set; } = false; // Check if the map is ready
+
+    // Before the game starts
+    private void OnEnable()
+    {
+        if (terrainMaterial != null)
+        {
+            // Save the original map height before play
+            originalMapHeight = terrainMaterial.GetFloat("_MapHeight");
+
+            // Set it to the runtime value
+            terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
+        }
+
+        // Editor only
+        #if UNITY_EDITOR
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        #endif
+    }
+
+    private void Awake()
+    {
+        // Initialise the player's last position
+        if (player != null)
+        {
+            lastPlayerPos = player.position;
+        }
+    }
 
     // When the game starts
     void Start()
@@ -62,6 +93,7 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
         int width = mapSize;
         int height = mapSize;
         vertices = new Vector3[(width + 1) * (height + 1)]; // Allocate vertex array
+        Vector2[] uvs = new Vector2[vertices.Length]; // Allocate UV array
 
         // Generate vertices using Perlin noise
         for (int y = 0; y <= height; y++)
@@ -72,7 +104,12 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
                 float sampleY = (float)y / noiseScale;
                 float noise = Mathf.PerlinNoise(sampleX, sampleY); // Get noise value
                 int i = y * (width + 1) + x; // Convert 2D index to 1D
+
                 vertices[i] = new Vector3(x, noise * heightMultiplier, y); // Set vertex position
+
+                // Assign UVs so the texture maps correctly
+                float textureScale = 5f; // Increase to tile texture more often
+                uvs[i] = new Vector2((float)x / width * textureScale, (float)y / height * textureScale);
             }
         }
 
@@ -97,27 +134,25 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
             }
         }
 
-        // Assign vertices and triangles to mesh
+        // Assign everything to the mesh
         mesh.vertices = vertices;
         mesh.triangles = triangles;
+        mesh.uv = uvs; // Add UVs 
         mesh.RecalculateNormals(); // Recalculate normals for lighting
         meshCollider.sharedMesh = mesh; // Assign mesh to collider
 
-        // Update shader if assigned
-        if (terrainMaterial != null)
-        {
-            terrainMaterial.SetFloat("_MapHeight", heightMultiplier);
-        }
-
         IsMapReady = true; // Mark map as ready
     }
+
 
     // Rebuilds the NavMesh at runtime (requires NavMeshSurface component)
     public void RebuildNavMesh()
     {
         var surface = GetComponent<NavMeshSurface>();
         if (surface != null)
+        {
             surface.BuildNavMesh();
+        }
     }
 
     // Returns the height of the terrain at a given world position.
@@ -158,7 +193,7 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
             if (dist < erosionRadius)
             {
                 float falloff = 1 - Mathf.Pow(dist / erosionRadius, erosionFalloff); // Smooth falloff
-                v.y -= erosionStrength * falloff * Time.deltaTime; // Lower vertex height
+                v.y -= erosionStrength * falloff; // Lower vertex height
                 vertices[i] = v; // Store modified vertex
             }
         }
@@ -167,11 +202,6 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
         mesh.vertices = vertices;
         mesh.RecalculateNormals();
         meshCollider.sharedMesh = mesh;
-
-        if (terrainMaterial != null)
-        {
-            terrainMaterial.SetFloat("_MapHeight", heightMultiplier); // Update shader height
-        }
     }
 
     // Property for external access to height multiplier
@@ -179,6 +209,38 @@ public class ErosionMapGenerator : MonoBehaviour, IMapGenerator
 
     // Property for external access to map size
     public int MapSize => mapSize;
+
+    // When the game is stopped
+    private void OnDisable()
+    {
+        // Restore when object is disabled or destroyed
+        RestoreOriginalMapHeight();
+
+        #if UNITY_EDITOR
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        #endif
+    }
+
+    #if UNITY_EDITOR
+    private void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        // When exiting play mode, restore the value
+        if (state == PlayModeStateChange.ExitingPlayMode)
+        {
+            RestoreOriginalMapHeight();
+        }
+    }
+    #endif
+
+    // Revert the MapHeight value from the shader back to the original
+    private void RestoreOriginalMapHeight()
+    {
+        if (terrainMaterial != null)
+        {
+            terrainMaterial.SetFloat("_MapHeight", originalMapHeight);
+        }
+    }
+
 }
 
 
